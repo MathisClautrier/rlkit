@@ -121,6 +121,10 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
 class MakeDeterministic(Policy):
     def __init__(self, stochastic_policy):
         self.stochastic_policy = stochastic_policy
+        if stochastic_policy.spirl:
+            self.spirl = True
+        else:
+            self.spirl = False
 
     def get_action(self, observation):
         return self.stochastic_policy.get_action(observation, deterministic=True)

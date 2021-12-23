@@ -114,7 +114,11 @@ def multitask_rollout(
             s = o[observation_key]
         g = o[representation_goal_key]
         new_obs = np.hstack((s, g))
-        a, agent_info = agent.get_action(new_obs, **get_action_kwargs)
+        if agent.spirl == False:
+            a, agent_info = agent.get_action(new_obs, **get_action_kwargs)
+        else:
+            z,agent_info = agent.get_embedding(new_obs,**get_action_kwargs)
+            a = agent.get_action(z)
         next_o, r, d, env_info = env.step(a)
         if render:
             env.render(**render_kwargs)
@@ -350,7 +354,11 @@ def rollout(
     if render:
         env.render(**render_kwargs)
     while path_length < max_path_length:
-        a, agent_info = agent.get_action(o)
+        if agent.spirl == False:
+            a, agent_info = agent.get_action(o)
+        else:
+            z,agent_info = agent.get_embedding(o)
+            a = agent.get_action(z)
         next_o, r, d, env_info = env.step(a)
         observations.append(o)
         rewards.append(r)
