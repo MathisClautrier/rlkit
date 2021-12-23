@@ -47,7 +47,7 @@ class SPIRLTrainer(TorchTrainer):
         self.prior_skill.eval()
         self.soft_target_tau = soft_target_tau
         self.target_update_period = target_update_period
-        self.target_divergence = 1
+        self.target_divergence = target_divergence
         self.alpha = ptu.ones(1,requires_grad=True, requires_grad=True)*alpha
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
         if self.use_automatic_entropy_tuning:
