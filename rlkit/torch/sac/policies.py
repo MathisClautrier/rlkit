@@ -10,6 +10,9 @@ from rlkit.torch.networks import Mlp
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
 
+def hello_world():
+    print('hello_world')
+    return None
 
 class TanhGaussianPolicy(Mlp, ExplorationPolicy):
     """
