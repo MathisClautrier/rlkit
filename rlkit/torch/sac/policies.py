@@ -45,6 +45,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         )
         self.log_std = None
         self.std = std
+        self.spirl = False
         if std is None:
             last_hidden_size = obs_dim
             if len(hidden_sizes) > 0:

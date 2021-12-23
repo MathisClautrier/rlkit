@@ -116,16 +116,20 @@ def multitask_rollout(
         new_obs = np.hstack((s, g))
         if agent.spirl == False:
             a, agent_info = agent.get_action(new_obs, **get_action_kwargs)
+            next_o, r, d, env_info = env.step(a)
         else:
-            z,agent_info = agent.get_embedding(new_obs,**get_action_kwargs)
-            a = agent.get_action(z)
-        next_o, r, d, env_info = env.step(a)
+            a,z,agent_info = agent.get_action(new_obs,**get_action_kwargs)
+            for act in a:
+                next_o, r, d, env_info = env.step(act)
         if render:
             env.render(**render_kwargs)
         observations.append(o)
         rewards.append(r)
         terminals.append(d)
-        actions.append(a)
+        if agent.spirl ==False:
+            actions.append(a)
+        else:
+            actions.append(z)
         next_observations.append(next_o)
         dict_next_obs.append(next_o)
         agent_infos.append(agent_info)
@@ -355,15 +359,19 @@ def rollout(
         env.render(**render_kwargs)
     while path_length < max_path_length:
         if agent.spirl == False:
-            a, agent_info = agent.get_action(o)
+            a, agent_info = agent.get_action(new_obs, **get_action_kwargs)
+            next_o, r, d, env_info = env.step(a)
         else:
-            z,agent_info = agent.get_embedding(o)
-            a = agent.get_action(z)
-        next_o, r, d, env_info = env.step(a)
+            a,z,agent_info = agent.get_action(new_obs,**get_action_kwargs)
+            for act in a:
+                next_o, r, d, env_info = env.step(act)
         observations.append(o)
         rewards.append(r)
         terminals.append(d)
-        actions.append(a)
+        if agent.spirl ==False:
+            actions.append(a)
+        else:
+            actions.append(z)
         agent_infos.append(agent_info)
         if not env_infos:
             for k, v in env_info.items():

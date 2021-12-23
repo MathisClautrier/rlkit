@@ -8,6 +8,7 @@ import torch.optim as optim
 from rlkit.core.eval_util import create_stats_ordered_dict
 from rlkit.torch.torch_rl_algorithm import TorchTrainer
 from torch import nn as nn
+from torch.distributions.kl import kl_divergence
 
 class SPIRLTrainer(TorchTrainer):
     def __init__(
@@ -18,6 +19,7 @@ class SPIRLTrainer(TorchTrainer):
         qf2,
         target_qf1,
         target_qf2,
+        prior_skill,
         discount=0.99,
         reward_scale=1.0,
         policy_lr=1e-3,
@@ -25,6 +27,7 @@ class SPIRLTrainer(TorchTrainer):
         optimizer_class=optim.Adam,
         soft_target_tau=1e-2,
         target_update_period=1,
+        target_divergence = 1,
         render_eval_paths=False,
         alpha=1,
         use_automatic_entropy_tuning=True,
@@ -40,19 +43,15 @@ class SPIRLTrainer(TorchTrainer):
         self.qf2 = qf2
         self.target_qf1 = target_qf1
         self.target_qf2 = target_qf2
+        self.prior_skill = prior_skill
+        self.prior_skill.eval()
         self.soft_target_tau = soft_target_tau
         self.target_update_period = target_update_period
-
-        self.alpha = torch.tensor(alpha)
+        self.target_divergence = 1
+        self.alpha = ptu.ones(1,requires_grad=True, requires_grad=True)*alpha
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
         if self.use_automatic_entropy_tuning:
-            if target_entropy:
-                self.target_entropy = target_entropy
-            else:
-                # heuristic value from Tuomas
-                self.target_entropy = -np.prod(self.env.action_space.shape).item()
-            self.log_alpha = ptu.zeros(1, requires_grad=True)
-            self.alpha_optimizer = optimizer_class([self.log_alpha], lr=policy_lr)
+            self.alpha_optimizer = optimizer_class([self.alpha], lr=policy_lr)
 
         self.render_eval_paths = render_eval_paths
 
@@ -60,7 +59,7 @@ class SPIRLTrainer(TorchTrainer):
 
         if policy_optimizer is None:
             self.policy_optimizer = optimizer_class(
-                self.policy.parameters(), lr=policy_lr,
+                self.policy.encoder.parameters(), lr=policy_lr,
             )
         if qf1_optimizer is None:
             self.qf1_optimizer = optimizer_class(self.qf1.parameters(), lr=qf_lr,)
@@ -77,45 +76,47 @@ class SPIRLTrainer(TorchTrainer):
         rewards = batch["rewards"]
         terminals = batch["terminals"]
         obs = batch["observations"]
-        actions = batch["actions"]
+        z = batch["actions"]
         next_obs = batch["next_observations"]
         """
         Policy and Alpha Loss
         """
-        new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
-            obs, reparameterize=True, return_log_prob=True,
+        new_obs_z, policy_mean,policy_log_std, pi_z = self.policy(
+            obs, reparameterize=True,
         )
-        if self.use_automatic_entropy_tuning:
-            alpha_loss = -(
-                self.log_alpha * (log_pi + self.target_entropy).detach()
-            ).mean()
-            self.alpha_optimizer.zero_grad()
-            alpha_loss.backward()
-            self.alpha_optimizer.step()
-            alpha = self.log_alpha.exp()
-        else:
-            alpha_loss = 0
-            alpha = self.alpha
+        with torch.no_grad():
+            pa_z=self.prior_skill.obtain_pa_z(obs)
+
+
+        alpha_loss = -(
+                self.alpha * (kl_divergence(pi_z,pa_z) - self.target_divergence).detach()
+        ).mean()
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
 
         q_new_actions = torch.min(
-            self.qf1(obs, new_obs_actions), self.qf2(obs, new_obs_actions),
+            self.qf1(obs, new_obs_z), self.qf2(obs, new_obs_z),
         )
-        policy_loss = (alpha * log_pi - q_new_actions).mean()
+        policy_loss = (q_new_actions - self.alpha*kl_divergence(pi_z,pa_z)).mean()
         """
         QF Loss
         """
-        q1_pred = self.qf1(obs, actions)
-        q2_pred = self.qf2(obs, actions)
+        q1_pred = self.qf1(obs, z)
+        q2_pred = self.qf2(obs, z)
         # Make sure policy accounts for squashing functions like tanh correctly!
-        new_next_actions, _, _, new_log_pi, *_ = self.policy(
-            next_obs, reparameterize=True, return_log_prob=True,
+        new_next_z, _, _, new_pi_z= self.policy(
+            next_obs, reparameterize=True,
         )
+        with torch.no_grad():
+            new_pa_z=self.prior_skill.obtain_pa_z(next_obs)
+
         target_q_values = (
             torch.min(
-                self.target_qf1(next_obs, new_next_actions),
-                self.target_qf2(next_obs, new_next_actions),
+                self.target_qf1(next_obs, new_next_z),
+                self.target_qf2(next_obs, new_next_z),
             )
-            - alpha * new_log_pi
+            - alpha * kl_divergence(new_pi_z,new_pa_z)
         )
 
         q_target = (
@@ -156,7 +157,6 @@ class SPIRLTrainer(TorchTrainer):
             Eval should set this to None.
             This way, these statistics are only computed for one batch.
             """
-            policy_loss = (log_pi - q_new_actions).mean()
 
             self.eval_statistics["QF1 Loss"] = np.mean(ptu.get_numpy(qf1_loss))
             self.eval_statistics["QF2 Loss"] = np.mean(ptu.get_numpy(qf2_loss))
@@ -180,9 +180,6 @@ class SPIRLTrainer(TorchTrainer):
                 create_stats_ordered_dict("Q Targets", ptu.get_numpy(q_target),)
             )
             self.eval_statistics.update(
-                create_stats_ordered_dict("Log Pis", ptu.get_numpy(log_pi),)
-            )
-            self.eval_statistics.update(
                 create_stats_ordered_dict("Policy mu", ptu.get_numpy(policy_mean),)
             )
             self.eval_statistics.update(
@@ -191,8 +188,7 @@ class SPIRLTrainer(TorchTrainer):
                 )
             )
             self.eval_statistics["Alpha"] = alpha.item()
-            if self.use_automatic_entropy_tuning:
-                self.eval_statistics["Alpha Loss"] = alpha_loss.item()
+            self.eval_statistics["Alpha Loss"] = alpha_loss.item()
         self._n_train_steps_total += 1
 
     def get_diagnostics(self):
@@ -209,11 +205,12 @@ class SPIRLTrainer(TorchTrainer):
             self.qf2,
             self.target_qf1,
             self.target_qf2,
+            self.prior_skill
         ]
 
     @networks.setter
     def networks(self, nets):
-        self.policy, self.qf1, self.qf2, self.target_qf1, self.target_qf2 = nets
+        self.policy, self.qf1, self.qf2, self.target_qf1, self.target_qf2,self.prior_skill = nets
 
     def get_snapshot(self):
         snapshot = dict(
