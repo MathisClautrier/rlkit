@@ -79,14 +79,6 @@ class SPIRLTrainer(TorchTrainer):
         obs = batch["observations"]
         z = batch["actions"]
         next_obs = batch["next_observations"]
-        print(z)
-        print(z.shape)
-        print(obs)
-        print(obs.shape)
-        print(next_obs)
-        print(next_obs.shape)
-        print(rewards)
-        print(rewards.shape)
         """
         Policy and Alpha Loss
         """
