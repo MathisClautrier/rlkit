@@ -71,6 +71,7 @@ class SPIRLTrainer(TorchTrainer):
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
         self._need_to_update_eval_statistics = True
+        print(env.simple_like)
 
     def train_from_torch(self, batch):
         rewards = batch["rewards"]
@@ -195,7 +196,7 @@ class SPIRLTrainer(TorchTrainer):
                     "Policy log std", ptu.get_numpy(policy_log_std),
                 )
             )
-            self.eval_statistics["Alpha"] = alpha.item()
+            self.eval_statistics["Alpha"] = self.alpha.item()
             self.eval_statistics["Alpha Loss"] = alpha_loss.item()
         self._n_train_steps_total += 1
 
