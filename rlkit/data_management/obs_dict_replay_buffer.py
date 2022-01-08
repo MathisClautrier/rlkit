@@ -25,6 +25,7 @@ class ObsDictRelabelingBuffer(ReplayBuffer):
     def __init__(
         self,
         max_replay_buffer_size,
+        embedding,
         env,
         fraction_goals_rollout_goals=1.0,
         fraction_goals_env_goals=0.0,
@@ -66,7 +67,7 @@ class ObsDictRelabelingBuffer(ReplayBuffer):
         if isinstance(self.env.action_space, Discrete):
             self._action_dim = env.action_space.n
         else:
-            self._action_dim = env.action_space.low.size
+            self._action_dim = embedding
 
         self._actions = np.zeros(
             (max_replay_buffer_size, self._action_dim), dtype=np.float32
@@ -130,7 +131,7 @@ class ObsDictRelabelingBuffer(ReplayBuffer):
         path_len = len(rewards)
 
         actions = flatten_n(actions)
-        if isinstance(self.env.action_space, Discrete):
+        if isinstance(self.env.action_space, Discrete): #no need to be fixed for continous space
             actions = np.eye(self._action_dim)[actions].reshape((-1, self._action_dim))
         obs = flatten_dict(obs, self.ob_keys_to_save + self.internal_keys)
         next_obs = flatten_dict(next_obs, self.ob_keys_to_save + self.internal_keys)

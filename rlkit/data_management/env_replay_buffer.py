@@ -6,7 +6,7 @@ import numpy as np
 
 
 class EnvReplayBuffer(SimpleReplayBuffer):
-    def __init__(self, max_replay_buffer_size, env, env_info_sizes=None):
+    def __init__(self, max_replay_buffer_size,embedding, env, env_info_sizes=None):
         """
         :param max_replay_buffer_size:
         :param env:
@@ -23,11 +23,11 @@ class EnvReplayBuffer(SimpleReplayBuffer):
 
         super().__init__(max_replay_buffer_size=max_replay_buffer_size,
                          observation_dim=get_dim(self._ob_space),
-                         action_dim=get_dim(self._action_space),
+                         action_dim=embedding,
                          env_info_sizes=env_info_sizes)
 
     def add_sample(self, observation, action, reward, terminal, next_observation, **kwargs):
-        if isinstance(self._action_space, Discrete):
+        if isinstance(self._action_space, Discrete): #No need to be fixed for continuous space
             new_action = np.zeros(self._action_dim)
             new_action[action] = 1
         else:
