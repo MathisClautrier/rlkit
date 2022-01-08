@@ -68,6 +68,7 @@ def multitask_rollout(
     if render:
         env.render(**render_kwargs)
     desired_goal = o[desired_goal_key]
+    print(max_path_length)
     while path_length < max_path_length:
         dict_obs.append(o)
         if observation_key:
@@ -77,49 +78,39 @@ def multitask_rollout(
         if agent.spirl == False:
             a, agent_info = agent.get_action(new_obs, **get_action_kwargs)
             next_o, r, d, env_info = env.step(a)
-            if render:
-                env.render(**render_kwargs)
-            observations.append(o)
-            rewards.append(r)
-            terminals.append(d)
-            actions.append(a)
-            next_observations.append(next_o)
-            dict_next_obs.append(next_o)
-            agent_infos.append(agent_info)
-            if not env_infos:
-                for k, v in env_info.items():
-                    env_infos[k] = [v]
-            else:
-                for k, v in env_info.items():
-                    env_infos[k].append(v)
-            path_length += 1
         else:
             a,z,agent_info = agent.get_action(new_obs,**get_action_kwargs)
+            r = np.zeros(1)
             for act in a:
-                next_o, r, d, env_info = env.step(act)
-                if render:
-                    env.render(**render_kwargs)
-                observations.append(o)
-                rewards.append(r)
-                terminals.append(d)
-                actions.append(z)
-                next_observations.append(next_o)
-                dict_next_obs.append(next_o)
-                agent_infos.append(agent_info)
-                if not env_infos:
-                    for k, v in env_info.items():
-                        env_infos[k] = [v]
-                else:
-                    for k, v in env_info.items():
-                        env_infos[k].append(v)
-                path_length += 1
+                next_o, R, d, env_info = env.step(act)
+                r= r + R
                 if d:
                     break
+        if render:
+            env.render(**render_kwargs)
+        observations.append(o)
+        rewards.append(r)
+        terminals.append(d)
+        if agent.spirl ==False:
+            actions.append(a)
+        else:
+            actions.append(z)
+        next_observations.append(next_o)
+        dict_next_obs.append(next_o)
+        agent_infos.append(agent_info)
+        if not env_infos:
+            for k, v in env_info.items():
+                env_infos[k] = [v]
+        else:
+            for k, v in env_info.items():
+                env_infos[k].append(v)
+        path_length += 1
         if d:
             break
         o = next_o
-    print(actions)
+
     actions = np.array(actions)
+    print(actions)
     if len(actions.shape) == 1:
         actions = np.expand_dims(actions, 1)
     observations = np.array(observations)
@@ -129,7 +120,7 @@ def multitask_rollout(
         next_observations = dict_next_obs
     for k, v in env_infos.items():
         env_infos[k] = np.array(v)
-    print(len(shape))
+    print(len(actions))
     print(len(observations))
     return dict(
         observations=observations,
