@@ -78,6 +78,14 @@ class SPIRLTrainer(TorchTrainer):
         obs = batch["observations"]
         z = batch["actions"]
         next_obs = batch["next_observations"]
+        print(z)
+        print(z.shape)
+        print(obs)
+        print(obs.shape)
+        print(next_obs)
+        print(next_obs.shape)
+        print(rewards)
+        print(rewards.shape)
         """
         Policy and Alpha Loss
         """
@@ -116,7 +124,7 @@ class SPIRLTrainer(TorchTrainer):
                 self.target_qf1(next_obs, new_next_z),
                 self.target_qf2(next_obs, new_next_z),
             )
-            - alpha * kl_divergence(new_pi_z,new_pa_z)
+            - self.alpha * kl_divergence(new_pi_z,new_pa_z)
         )
 
         q_target = (
