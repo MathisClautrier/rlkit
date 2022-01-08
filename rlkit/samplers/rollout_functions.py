@@ -81,6 +81,7 @@ def multitask_rollout(
             a,z,agent_info = agent.get_action(new_obs,**get_action_kwargs)
             r = np.zeros(1)
             for act in a:
+                print(act)
                 next_o, R, d, env_info = env.step(act)
                 r= r + R
                 if d:
