@@ -118,6 +118,7 @@ def multitask_rollout(
         if d:
             break
         o = next_o
+    print(actions)
     actions = np.array(actions)
     if len(actions.shape) == 1:
         actions = np.expand_dims(actions, 1)
@@ -128,8 +129,8 @@ def multitask_rollout(
         next_observations = dict_next_obs
     for k, v in env_infos.items():
         env_infos[k] = np.array(v)
-    print(actions.shape)
-    print(observations.shape)
+    print(len(shape))
+    print(len(observations))
     return dict(
         observations=observations,
         actions=actions,
