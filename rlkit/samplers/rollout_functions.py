@@ -13,6 +13,26 @@ def flatten_dict(dicts, keys):
     """
     return {key: flatten_n([d[key] for d in dicts]) for key in keys}
 
+
+def vec_multitask_rollout(
+    env,
+    agent,
+    envs_rollout,
+    obs_reset,
+    max_path_length=np.inf,
+    render=False,
+    render_kwargs=None,
+    observation_key=None,
+    desired_goal_key=None,
+    representation_goal_key=None,
+    get_action_kwargs=None,
+    return_dict_obs=False,
+    reset_kwargs=None,
+):
+
+    return None
+
+
 def multitask_rollout(
     env,
     agent,
@@ -108,8 +128,6 @@ def multitask_rollout(
         next_observations = dict_next_obs
     for k, v in env_infos.items():
         env_infos[k] = np.array(v)
-    print(len(observations))
-    print(len(actions))
     return dict(
         observations=observations,
         actions=actions,
@@ -122,6 +140,24 @@ def multitask_rollout(
         desired_goals=np.repeat(desired_goal[None], path_length, 0),
         full_observations=dict_obs,
     )
+
+
+def multiagent_multitask_rollout(
+    env,
+    agent,
+    max_path_length=np.inf,
+    render=False,
+    render_kwargs=None,
+    observation_key=None,
+    achieved_q_key=None,
+    desired_q_key=None,
+    representation_goal_key=None,
+    get_action_kwargs=None,
+    reset_kwargs=None,
+):
+
+    return None
+
 
 def plot_paths(paths):
     import matplotlib.pyplot as plt
