@@ -91,7 +91,7 @@ class SPIRLTrainer(TorchTrainer):
             pa_z=self.prior_skill.obtain_pa_z(obs)
 
         alpha_loss = -(
-                self.alpha * (kl_divergence(pi_z,pa_z) + self.target_divergence).detach()
+                self.alpha * (kl_divergence(pi_z,pa_z) - self.target_divergence).detach()
         ).mean()
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
