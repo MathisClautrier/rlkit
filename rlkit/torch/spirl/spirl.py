@@ -87,31 +87,24 @@ class SPIRLTrainer(TorchTrainer):
         new_obs_z, policy_mean,policy_log_std, pi_z = self.policy(
             obs, reparameterize=True,
         )
-        print('policy',time.time() - t0)
         with torch.no_grad():
             pa_z=self.prior_skill.obtain_pa_z(obs)
-        print('prior',time.time() - t0)
 
         alpha_loss = -(
                 self.alpha * (kl_divergence(pi_z,pa_z) - self.target_divergence).detach()
         ).mean()
-        print('alpha_loss',time.time() - t0)
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
-        print('alpha_grad',time.time() - t0)
         q_new_actions = torch.min(
             self.qf1(obs, new_obs_z), self.qf2(obs, new_obs_z),
         )
-        print('q_new_actions',time.time() - t0)
         policy_loss = (q_new_actions - self.alpha*kl_divergence(pi_z,pa_z)).mean()
-        print('policy_loss',time.time() - t0)
         """
         QF Loss
         """
         q1_pred = self.qf1(obs, z)
         q2_pred = self.qf2(obs, z)
-        print('qf_pred',time.time() - t0)
         # Make sure policy accounts for squashing functions like tanh correctly!
         new_next_z, _, _, new_pi_z= self.policy(
             next_obs, reparameterize=True,
@@ -126,23 +119,20 @@ class SPIRLTrainer(TorchTrainer):
             )
             - self.alpha * kl_divergence(new_pi_z,new_pa_z)
         )
-        print('target_q_values',time.time() - t0)
         q_target = (
             self.reward_scale * rewards
             + (1.0 - terminals) * self.discount * target_q_values
         )
-        print('q_target',time.time() - t0)
         qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
         qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
-        print('qf_loss',time.time() - t0)
         """
         Update networks
         """
+        print(alpha_loss.item(),policy_loss.item(),qf1_loss.item(),qf2_loss.item() )
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
         norm_policy = nn.utils.clip_grad_norm_(self.policy.parameters(), 100)
         self.policy_optimizer.step()
-        print('policy_grad',time.time() - t0)
         self.qf1_optimizer.zero_grad()
         qf1_loss.backward()
         norm_qf1 = nn.utils.clip_grad_norm_(self.qf1.parameters(), 100)
@@ -151,14 +141,12 @@ class SPIRLTrainer(TorchTrainer):
         qf2_loss.backward()
         norm_qf2 = nn.utils.clip_grad_norm_(self.qf2.parameters(), 100)
         self.qf2_optimizer.step()
-        print('qf_grad',time.time() - t0)
         """
         Soft Updates
         """
         if self._n_train_steps_total % self.target_update_period == 0:
             ptu.soft_update_from_to(self.qf1, self.target_qf1, self.soft_target_tau)
             ptu.soft_update_from_to(self.qf2, self.target_qf2, self.soft_target_tau)
-        print('soft_grad',time.time() - t0)
         """
         Save some statistics for eval
         """
