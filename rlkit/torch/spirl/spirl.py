@@ -99,7 +99,7 @@ class SPIRLTrainer(TorchTrainer):
         q_new_actions = torch.min(
             self.qf1(obs, new_obs_z), self.qf2(obs, new_obs_z),
         )
-        policy_loss = (q_new_actions - self.alpha*kl_divergence(pi_z,pa_z)).mean()
+        policy_loss = -(q_new_actions - self.alpha*kl_divergence(pi_z,pa_z)).mean()
         """
         QF Loss
         """
