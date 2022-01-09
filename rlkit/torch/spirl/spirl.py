@@ -128,7 +128,7 @@ class SPIRLTrainer(TorchTrainer):
         """
         Update networks
         """
-        print(alpha_loss.item(),policy_loss.item(),qf1_loss.item(),qf2_loss.item() )
+        print(self.alpha,alpha_loss.item(),policy_loss.item(),qf1_loss.item(),qf2_loss.item() )
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
         norm_policy = nn.utils.clip_grad_norm_(self.policy.parameters(), 100)
