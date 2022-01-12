@@ -67,7 +67,10 @@ class ObsDictRelabelingBuffer(ReplayBuffer):
         if isinstance(self.env.action_space, Discrete):
             self._action_dim = env.action_space.n
         else:
-            self._action_dim = embedding
+            if embedding is not None:
+                self._action_dim = embedding
+            else:
+                self._action_dim = env.action_space.low.size
 
         self._actions = np.zeros(
             (max_replay_buffer_size, self._action_dim), dtype=np.float32
