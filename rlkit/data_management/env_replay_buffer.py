@@ -14,7 +14,10 @@ class EnvReplayBuffer(SimpleReplayBuffer):
         self.env = env
         self._ob_space = env.observation_space
         self._action_space = env.action_space
-
+        if embedding is not None:
+            action_dim = embedding
+        else:
+            action_dim = get_dim(self._action_space)
         if env_info_sizes is None:
             if hasattr(env, 'info_sizes'):
                 env_info_sizes = env.info_sizes
@@ -22,8 +25,8 @@ class EnvReplayBuffer(SimpleReplayBuffer):
                 env_info_sizes = dict()
 
         super().__init__(max_replay_buffer_size=max_replay_buffer_size,
-                         observation_dim=get_dim(self._ob_space),
-                         action_dim=embedding,
+                         observation_dim=self._ob_space.spaces['observation'],
+                         action_dim=action_dim,
                          env_info_sizes=env_info_sizes)
 
     def add_sample(self, observation, action, reward, terminal, next_observation, **kwargs):
