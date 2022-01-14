@@ -25,7 +25,7 @@ class EnvReplayBuffer(SimpleReplayBuffer):
                 env_info_sizes = dict()
 
         super().__init__(max_replay_buffer_size=max_replay_buffer_size,
-                         observation_dim=self._ob_space.spaces['observation'],
+                         observation_dim=get_dim(self._ob_space.spaces['observation']),
                          action_dim=action_dim,
                          env_info_sizes=env_info_sizes)
 
