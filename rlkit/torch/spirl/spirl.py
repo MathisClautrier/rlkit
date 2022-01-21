@@ -21,6 +21,7 @@ class SPIRLTrainer(TorchTrainer):
         target_qf1,
         target_qf2,
         prior_skill,
+        freeze = False,
         discount=0.99,
         reward_scale=1.0,
         policy_lr=3e-4,
@@ -59,9 +60,14 @@ class SPIRLTrainer(TorchTrainer):
         self.qf_criterion = nn.MSELoss()
 
         if policy_optimizer is None:
-            self.policy_optimizer = optimizer_class(
-                self.policy.encoder.parameters(), lr=policy_lr,
-            )
+            if freeze:
+                self.policy_optimizer = optimizer_class(
+                    self.policy.encoder.layers.parameters(), lr=policy_lr,
+                )
+            else:
+                self.policy_optimizer = optimizer_class(
+                    self.policy.encoder.parameters(), lr=policy_lr,
+                )
         if qf1_optimizer is None:
             self.qf1_optimizer = optimizer_class(self.qf1.parameters(), lr=qf_lr,)
         if qf2_optimizer is None:
